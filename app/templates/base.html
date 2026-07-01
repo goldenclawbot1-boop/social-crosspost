@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ app_name }}{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.1"></script>
+    <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .card { @apply bg-white rounded-lg shadow-sm border border-gray-200; }
+        .btn-primary { @apply bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition font-medium; }
+        .btn-secondary { @apply bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition font-medium border border-gray-300; }
+        .btn-danger { @apply bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition font-medium; }
+        .btn-success { @apply bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition font-medium; }
+        .input-field { @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none; }
+        .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+        .badge-green { @apply bg-green-100 text-green-800; }
+        .badge-red { @apply bg-red-100 text-red-800; }
+        .badge-yellow { @apply bg-yellow-100 text-yellow-800; }
+        .badge-blue { @apply bg-blue-100 text-blue-800; }
+        .badge-gray { @apply bg-gray-100 text-gray-800; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-14">
+                <div class="flex items-center space-x-1">
+                    <a href="/" class="flex items-center px-3 py-2 text-lg font-bold text-gray-900">
+                        📤 {{ app_name }}
+                    </a>
+                    {% if user %}
+                    <a href="/" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md {% if request.url.path == '/' %}bg-gray-100 text-gray-900{% endif %}">
+                        Dashboard
+                    </a>
+                    <a href="/compose" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md {% if request.url.path.startswith('/compose') %}bg-gray-100 text-gray-900{% endif %}">
+                        Compose
+                    </a>
+                    <a href="/posts" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md {% if request.url.path.startswith('/posts') %}bg-gray-100 text-gray-900{% endif %}">
+                        Posts
+                    </a>
+                    <a href="/platforms" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md {% if request.url.path.startswith('/platforms') %}bg-gray-100 text-gray-900{% endif %}">
+                        Platforms
+                    </a>
+                    <a href="/schedules" class="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md {% if request.url.path.startswith('/schedules') %}bg-gray-100 text-gray-900{% endif %}">
+                        Schedules
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="flex items-center space-x-2">
+                    {% if user %}
+                    <span class="text-sm text-gray-500">{{ user.email }}</span>
+                    <a href="/auth/logout" class="btn-secondary text-sm !py-1.5 !px-3">Logout</a>
+                    {% else %}
+                    <a href="/auth/login" class="btn-secondary text-sm !py-1.5 !px-3">Login</a>
+                    <a href="/auth/register" class="btn-primary text-sm !py-1.5 !px-3">Register</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    {% if request.query_params.get('connected') %}
+    <div class="max-w-7xl mx-auto px-4 mt-4">
+        <div class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg flex justify-between items-center" x-data="{show: true}" x-show="show">
+            <span>✅ Successfully connected {{ request.query_params.get('connected')|capitalize }}!</span>
+            <button @click="show = false" class="text-green-600 hover:text-green-800 font-bold">&times;</button>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+    <script>
+        // Global toast function
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const colors = {
+                success: 'bg-green-600',
+                error: 'bg-red-600',
+                info: 'bg-blue-600'
+            };
+            const toast = document.createElement('div');
+            toast.className = `${colors[type] || colors.info} text-white px-4 py-3 rounded-lg shadow-lg text-sm flex items-center space-x-2`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 4000);
+        }
+
+        // HTMX: after swap, re-init Alpine
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target) {
+                Alpine.initTree(evt.detail.target);
+            }
+        });
+    </script>
+</body>
+</html>

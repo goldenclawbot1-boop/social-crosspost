@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Schedules — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Schedules</h1>
+    <button onclick="document.getElementById('new-schedule-form').classList.toggle('hidden')" class="btn-primary text-sm">+ New Schedule</button>
+</div>
+
+<!-- New Schedule Form -->
+<div id="new-schedule-form" class="card p-6 mb-6 hidden">
+    <h2 class="text-lg font-semibold text-gray-900 mb-4">Create Schedule</h2>
+    <form
+        hx-post="/schedules"
+        hx-target="#schedules-list"
+        hx-swap="afterbegin"
+        class="space-y-4"
+    >
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input type="text" name="name" class="input-field" placeholder="Daily morning post" required>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Cron Expression</label>
+            <input type="text" name="cron_expression" class="input-field" placeholder="0 9 * * *" required>
+            <p class="text-xs text-gray-400 mt-1">e.g., <code>0 9 * * *</code> = every day at 9am, <code>0 9 * * 1</code> = every Monday 9am</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Content Template</label>
+            <textarea name="content_template" rows="3" class="input-field" placeholder="Your post content... Use {{date}} for current date"></textarea>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Platforms</label>
+            <div class="flex flex-wrap gap-2">
+                {% for platform_name, accounts in connected_platforms.items() %}
+                <label class="flex items-center space-x-1 text-sm">
+                    <input type="checkbox" name="platforms" value="{{ platform_name }}" checked class="rounded">
+                    <span>{{ platform_name|capitalize }}</span>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">Create Schedule</button>
+    </form>
+</div>
+
+<!-- Schedules List -->
+<div id="schedules-list" class="space-y-4">
+    {% if schedules %}
+    {% for s in schedules %}
+    <div class="card p-5">
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="font-semibold text-gray-900">{{ s.name }}</h3>
+                <p class="text-sm text-gray-500 mt-1">{{ s.content_template[:100] or '(No template)' }}</p>
+                <div class="flex items-center space-x-3 mt-2">
+                    <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-mono">{{ s.cron_expression }}</span>
+                    <span class="badge {% if s.is_active %}badge-green{% else %}badge-gray{% endif %}">
+                        {{ 'Active' if s.is_active else 'Paused' }}
+                    </span>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                <button
+                    hx-post="/schedules/{{ s.id }}/toggle"
+                    class="text-sm text-blue-600 hover:underline"
+                >{{ 'Pause' if s.is_active else 'Resume' }}</button>
+                <button
+                    hx-delete="/schedules/{{ s.id }}"
+                    hx-confirm="Delete this schedule?"
+                    class="text-sm text-red-600 hover:underline"
+                >Delete</button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card p-12 text-center">
+        <p class="text-gray-400 mb-4">No schedules yet</p>
+        <button onclick="document.getElementById('new-schedule-form').classList.remove('hidden')" class="btn-primary text-sm">Create your first schedule</button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

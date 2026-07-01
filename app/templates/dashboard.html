@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — {{ app_name }}{% endblock %}
+{% block content %}
+
+<!-- Stats Row -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="card p-5">
+        <div class="text-sm text-gray-500 font-medium">Total Posts</div>
+        <div class="text-3xl font-bold text-gray-900 mt-1">{{ stats.total_posts }}</div>
+    </div>
+    <div class="card p-5">
+        <div class="text-sm text-gray-500 font-medium">Published</div>
+        <div class="text-3xl font-bold text-green-600 mt-1">{{ stats.published }}</div>
+    </div>
+    <div class="card p-5">
+        <div class="text-sm text-gray-500 font-medium">Connected Platforms</div>
+        <div class="text-3xl font-bold text-blue-600 mt-1">{{ stats.platforms }}</div>
+    </div>
+    <div class="card p-5">
+        <div class="text-sm text-gray-500 font-medium">Scheduled</div>
+        <div class="text-3xl font-bold text-yellow-600 mt-1">{{ stats.scheduled }}</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Quick Compose -->
+    <div class="lg:col-span-2">
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Quick Compose</h2>
+                <a href="/compose" class="text-sm text-blue-600 hover:underline">Full editor →</a>
+            </div>
+            <form
+                hx-post="/posts"
+                hx-target="#recent-posts"
+                hx-swap="afterbegin"
+            >
+                <textarea name="content" rows="3" class="input-field mb-3" placeholder="What do you want to share?"></textarea>
+                <div class="flex justify-between items-center">
+                    <div class="flex space-x-2">
+                        {% for platform_name, accounts in connected_platforms.items() %}
+                        <label class="flex items-center space-x-1 text-sm">
+                            <input type="checkbox" name="platforms" value="{{ platform_name }}" checked class="rounded">
+                            <span>{{ platform_name|capitalize }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn-primary text-sm">Post Now</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Recent Posts -->
+        <div class="card p-6 mt-6" id="recent-posts">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Recent Posts</h2>
+            {% if recent_posts %}
+            <div class="space-y-3">
+                {% for post in recent_posts %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm text-gray-900 truncate">{{ post.content[:100] or '(No content)' }}</p>
+                        <div class="flex items-center space-x-2 mt-1">
+                            <span class="text-xs text-gray-400">{{ post.created_at[:16] }}</span>
+                            <span class="badge {% if post.status == 'published' %}badge-green{% elif post.status == 'failed' %}badge-red{% elif post.status == 'draft' %}badge-gray{% else %}badge-yellow{% endif %}">
+                                {{ post.status }}
+                            </span>
+                        </div>
+                    </div>
+                    <a href="/posts/{{ post.id }}" class="text-sm text-blue-600 hover:underline ml-4">View</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-sm text-center py-6">No posts yet. <a href="/compose" class="text-blue-600 hover:underline">Create your first post</a></p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Connected Platforms Sidebar -->
+    <div>
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Platforms</h2>
+                <a href="/platforms" class="text-sm text-blue-600 hover:underline">Manage</a>
+            </div>
+            {% if connected_platforms %}
+            <div class="space-y-2">
+                {% for platform_name, accounts in connected_platforms.items() %}
+                <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-lg">{{ platform_info[platform_name].icon if platform_name in platform_info else '🔗' }}</span>
+                        <span class="text-sm font-medium">{{ platform_name|capitalize }}</span>
+                    </div>
+                    <span class="badge badge-green">Connected</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-400 text-sm text-center py-4">
+                No platforms connected yet.<br>
+                <a href="/platforms" class="text-blue-600 hover:underline">Connect your first platform</a>
+            </p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

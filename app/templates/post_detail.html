@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Post Detail — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <a href="/posts" class="text-sm text-blue-600 hover:underline mb-1 inline-block">← Back to Posts</a>
+            <h1 class="text-2xl font-bold text-gray-900">Post Detail</h1>
+        </div>
+        <span class="badge {% if post.status == 'published' %}badge-green{% elif post.status == 'failed' %}badge-red{% elif post.status == 'draft' %}badge-gray{% elif post.status == 'scheduled' %}badge-blue{% else %}badge-yellow{% endif %} text-sm">
+            {{ post.status }}
+        </span>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Content -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="card p-6">
+                <p class="text-gray-900 whitespace-pre-wrap">{{ post.content or '(No content)' }}</p>
+                {% if post.link_url %}
+                <a href="{{ post.link_url }}" target="_blank" class="text-blue-600 text-sm hover:underline mt-2 inline-block">{{ post.link_url }}</a>
+                {% endif %}
+                {% if post.hashtags %}
+                <p class="text-blue-500 text-sm mt-2">{{ post.hashtags }}</p>
+                {% endif %}
+            </div>
+
+            {% if media_files %}
+            <div class="card p-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Media ({{ media_files|length }})</h3>
+                <div class="grid grid-cols-3 gap-2">
+                    {% for m in media_files %}
+                    <div class="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        {% if m.file_type == 'image' %}
+                        <img src="/media/{{ m.id }}/preview" class="w-full h-full object-cover">
+                        {% else %}
+                        <video src="/media/{{ m.id }}/preview" class="w-full h-full object-cover" controls></video>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Platform Status -->
+        <div class="space-y-4">
+            <div class="card p-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Platform Status</h3>
+                {% if platform_statuses %}
+                <div class="space-y-3">
+                    {% for ps in platform_statuses %}
+                    <div class="p-3 rounded-lg {% if ps.status == 'published' %}bg-green-50 border border-green-200{% elif ps.status == 'failed' %}bg-red-50 border border-red-200{% else %}bg-gray-50 border border-gray-200{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium">{{ ps.platform|capitalize }}</span>
+                            <span class="badge {% if ps.status == 'published' %}badge-green{% elif ps.status == 'failed' %}badge-red{% else %}badge-gray{% endif %} text-xs">
+                                {{ ps.status }}
+                            </span>
+                        </div>
+                        {% if ps.platform_post_url %}
+                        <a href="{{ ps.platform_post_url }}" target="_blank" class="text-xs text-blue-600 hover:underline mt-1 block">View on {{ ps.platform|capitalize }} →</a>
+                        {% endif %}
+                        {% if ps.error_message %}
+                        <p class="text-xs text-red-600 mt-1">{{ ps.error_message }}</p>
+                        {% endif %}
+                        {% if ps.published_at %}
+                        <p class="text-xs text-gray-400 mt-1">{{ ps.published_at[:19] }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-400 text-sm text-center py-4">Not published yet</p>
+                {% endif %}
+            </div>
+
+            <div class="card p-6">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Details</h3>
+                <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Created</span>
+                        <span class="text-gray-900">{{ post.created_at[:19] }}</span>
+                    </div>
+                    {% if post.scheduled_at %}
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Scheduled</span>
+                        <span class="text-gray-900">{{ post.scheduled_at[:19] }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Posts — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Posts</h1>
+    <a href="/compose" class="btn-primary text-sm">+ New Post</a>
+</div>
+
+<div class="card">
+    {% if posts %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead>
+                <tr class="border-b border-gray-200">
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Content</th>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Platforms</th>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="text-right px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for post in posts %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3">
+                        <p class="text-sm text-gray-900 truncate max-w-xs">{{ post.content[:120] or '(No content)' }}</p>
+                        {% if post.hashtags %}
+                        <p class="text-xs text-blue-500 mt-0.5">{{ post.hashtags }}</p>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex flex-wrap gap-1">
+                            {% for pp in post.platform_statuses %}
+                            <span class="badge {% if pp.status == 'published' %}badge-green{% elif pp.status == 'failed' %}badge-red{% else %}badge-gray{% endif %} text-xs">
+                                {{ pp.platform }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="badge {% if post.status == 'published' %}badge-green{% elif post.status == 'failed' %}badge-red{% elif post.status == 'draft' %}badge-gray{% elif post.status == 'scheduled' %}badge-blue{% else %}badge-yellow{% endif %}">
+                            {{ post.status }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ post.created_at[:16] }}</td>
+                    <td class="px-4 py-3 text-right">
+                        <a href="/posts/{{ post.id }}" class="text-sm text-blue-600 hover:underline">View</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-12">
+        <p class="text-gray-400 mb-4">No posts yet</p>
+        <a href="/compose" class="btn-primary">Create your first post</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

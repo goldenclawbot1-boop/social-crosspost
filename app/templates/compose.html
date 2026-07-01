@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block title %}Compose — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div x-data="composer()" class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">
+            {% if post %}Edit Post{% else %}New Post{% endif %}
+        </h1>
+        <div class="flex space-x-2">
+            <button @click="saveDraft()" class="btn-secondary text-sm">Save Draft</button>
+            <button @click="publish()" class="btn-primary text-sm" :disabled="publishing">
+                <span x-show="!publishing">Publish Now →</span>
+                <span x-show="publishing">Publishing...</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Editor -->
+        <div class="lg:col-span-2 space-y-4">
+            <div class="card p-4">
+                <textarea
+                    x-model="content"
+                    rows="6"
+                    class="input-field border-0 !ring-0 !shadow-none text-lg"
+                    placeholder="Write your caption..."
+                    @input="updateCharCount()"
+                >{{ post.content if post else '' }}</textarea>
+                <div class="flex justify-between items-center text-xs text-gray-400 mt-2">
+                    <span x-text="charCount + ' / ' + maxChars"></span>
+                    <span x-show="charCount > maxChars" class="text-red-500">Too long for some platforms</span>
+                </div>
+            </div>
+
+            <!-- Media Upload -->
+            <div class="card p-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-sm font-semibold text-gray-700">Media</h3>
+                    <span class="text-xs text-gray-400" x-text="media.length + ' / 10 files'"></span>
+                </div>
+                <div class="flex flex-wrap gap-2 mb-3" id="media-preview">
+                    {% if post and media_files %}
+                    {% for m in media_files %}
+                    <div class="relative w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                        <img src="/media/{{ m.id }}/preview" class="w-full h-full object-cover">
+                        <button class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">&times;</button>
+                    </div>
+                    {% endfor %}
+                    {% endif %}
+                </div>
+                <form
+                    id="upload-form"
+                    hx-encoding="multipart/form-data"
+                    hx-post="/media/upload"
+                    hx-target="#media-preview"
+                    hx-swap="beforeend"
+                >
+                    <input
+                        type="file"
+                        name="files"
+                        multiple
+                        accept="image/*,video/*"
+                        class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                        @change="uploadMedia($event)"
+                    >
+                </form>
+            </div>
+
+            <!-- Link URL -->
+            <div class="card p-4">
+                <label class="text-sm font-semibold text-gray-700 block mb-1">Link URL (optional)</label>
+                <input type="url" x-model="linkUrl" class="input-field" placeholder="https://...">
+            </div>
+        </div>
+
+        <!-- Sidebar: Platform Selector -->
+        <div class="space-y-4">
+            <div class="card p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Post to</h3>
+                {% if connected_platforms %}
+                <div class="space-y-2">
+                    {% for platform_name, accounts in connected_platforms.items() %}
+                    <label class="flex items-center justify-between p-2 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100">
+                        <div class="flex items-center space-x-2">
+                            <input type="checkbox" x-model="selectedPlatforms" value="{{ platform_name }}" checked class="rounded">
+                            <span class="text-lg">{{ platform_info[platform_name].icon if platform_name in platform_info else '🔗' }}</span>
+                            <span class="text-sm font-medium">{{ platform_name|capitalize }}</span>
+                        </div>
+                        <span class="text-xs text-gray-400">{{ accounts|length }} account(s)</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-400 text-sm text-center py-4">
+                    No platforms connected.<br>
+                    <a href="/platforms" class="text-blue-600 hover:underline">Connect a platform first</a>
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Schedule -->
+            <div class="card p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Schedule (optional)</h3>
+                <input type="datetime-local" x-model="scheduledAt" class="input-field text-sm">
+                <p class="text-xs text-gray-400 mt-1">Leave empty to publish immediately</p>
+            </div>
+
+            <!-- Publish Status -->
+            <div x-show="publishResults.length > 0" class="card p-4">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Publish Status</h3>
+                <div class="space-y-2">
+                    <template x-for="result in publishResults" :key="result.platform">
+                        <div class="flex items-center justify-between p-2 rounded-lg" :class="result.success ? 'bg-green-50' : 'bg-red-50'">
+                            <span class="text-sm" x-text="result.platform"></span>
+                            <span class="text-xs" :class="result.success ? 'text-green-700' : 'text-red-700'" x-text="result.success ? '✅ Published' : '❌ ' + result.error"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function composer() {
+    return {
+        content: '{{ post.content if post else '' }}',
+        linkUrl: '{{ post.link_url if post else '' }}',
+        media: [],
+        selectedPlatforms: {{ connected_platforms.keys()|list|tojson }},
+        scheduledAt: '',
+        publishing: false,
+        publishResults: [],
+        charCount: {{ (post.content|length) if post else 0 }},
+        maxChars: 280,
+
+        updateCharCount() {
+            this.charCount = this.content.length;
+        },
+
+        uploadMedia(event) {
+            const files = event.target.files;
+            for (let f of files) {
+                this.media.push({name: f.name, type: f.type.startsWith('video') ? 'video' : 'image'});
+            }
+        },
+
+        async saveDraft() {
+            const formData = new FormData();
+            formData.append('content', this.content);
+            formData.append('link_url', this.linkUrl);
+            formData.append('platforms', JSON.stringify(this.selectedPlatforms));
+            formData.append('status', 'draft');
+            {% if post %}
+            formData.append('post_id', '{{ post.id }}');
+            {% endif %}
+
+            const resp = await fetch('{% if post %}/posts/{{ post.id }}{% else %}/posts{% endif %}', {
+                method: '{% if post %}PUT{% else %}POST{% endif %}',
+                body: formData
+            });
+            const data = await resp.json();
+            if (data.success) {
+                showToast('Draft saved!', 'success');
+            } else {
+                showToast(data.error || 'Failed to save', 'error');
+            }
+        },
+
+        async publish() {
+            if (!this.content.trim() && this.media.length === 0) {
+                showToast('Please add content or media', 'error');
+                return;
+            }
+            if (this.selectedPlatforms.length === 0) {
+                showToast('Select at least one platform', 'error');
+                return;
+            }
+
+            this.publishing = true;
+            this.publishResults = [];
+
+            // First save
+            const formData = new FormData();
+            formData.append('content', this.content);
+            formData.append('link_url', this.linkUrl);
+            formData.append('platforms', JSON.stringify(this.selectedPlatforms));
+            formData.append('scheduled_at', this.scheduledAt || '');
+            {% if post %}
+            formData.append('post_id', '{{ post.id }}');
+            {% endif %}
+
+            const saveResp = await fetch('{% if post %}/posts/{{ post.id }}{% else %}/posts{% endif %}', {
+                method: '{% if post %}PUT{% else %}POST{% endif %}',
+                body: formData
+            });
+            const saveData = await saveResp.json();
+
+            if (!saveData.success) {
+                showToast(saveData.error || 'Failed to save', 'error');
+                this.publishing = false;
+                return;
+            }
+
+            const postId = saveData.post_id;
+
+            // Publish
+            const pubResp = await fetch(`/posts/${postId}/publish`, { method: 'POST' });
+            const pubData = await pubResp.json();
+
+            this.publishResults = pubData.results || [];
+            this.publishing = false;
+
+            const allSuccess = this.publishResults.every(r => r.success);
+            if (allSuccess) {
+                showToast('Published to all platforms! 🎉', 'success');
+                setTimeout(() => { window.location.href = `/posts/${postId}`; }, 1500);
+            } else {
+                const failed = this.publishResults.filter(r => !r.success).length;
+                showToast(`Published with ${failed} failure(s)`, 'error');
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Platforms — {{ app_name }}{% endblock %}
+{% block content %}
+
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Connected Platforms</h1>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for key, info in platforms.items() %}
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+                <span class="text-2xl">{{ info.icon }}</span>
+                <h3 class="font-semibold text-gray-900">{{ info.name }}</h3>
+            </div>
+            {% if key in connected %}
+            <span class="badge badge-green">Connected</span>
+            {% else %}
+            <span class="badge badge-gray">Not connected</span>
+            {% endif %}
+        </div>
+        <p class="text-sm text-gray-500 mb-3">{{ info.description }}</p>
+        <div class="flex flex-wrap gap-1 mb-3">
+            {% for mt in info.media_types %}
+            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{{ mt }}</span>
+            {% endfor %}
+        </div>
+
+        {% if key in connected %}
+        <div class="space-y-2">
+            {% for acc in connected[key] %}
+            <div class="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                <span class="text-sm">{{ acc.account_name }}</span>
+                <button
+                    hx-delete="/platforms/{{ key }}/{{ acc.id }}"
+                    hx-confirm="Disconnect {{ acc.account_name }}?"
+                    class="text-xs text-red-600 hover:underline"
+                >Disconnect</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        {% if info.auth_type == 'bot_token' %}
+        <!-- Manual connect for Telegram -->
+        <form
+            hx-post="/platforms/{{ key }}/connect-manual"
+            hx-target="this"
+            hx-swap="outerHTML"
+            class="space-y-2"
+        >
+            <input type="text" name="bot_token" class="input-field text-sm" placeholder="Bot token from @BotFather" required>
+            <button type="submit" class="btn-primary w-full text-sm">Connect</button>
+        </form>
+        {% else %}
+        <a href="/platforms/{{ key }}/connect" class="btn-primary w-full text-sm block text-center">Connect {{ info.name }}</a>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+crosspost.db
+uploads/*
+!uploads/.gitkeep
+.DS_Store
+*.pyo
+*.egg-info/
+dist/
